@@ -6,7 +6,7 @@ const Header = () => {
     const navBar = (
       <div className='flex lg:flex-row items-center flex-col gap-2 p-3 '>
         <li>
-          <Link>Home</Link>
+          <Link to='/'>Home</Link>
         </li>
         <li>
           <Link>Dashboard</Link>
@@ -16,20 +16,20 @@ const Header = () => {
           <Link>Contact Us</Link>
         </li>
         <li>
-          <Link>Our Menu</Link>
+          <Link to='/menu'>Our Menu</Link>
         </li>
         <li>
-          <Link>Our Shop</Link>
+          <Link to='/order/salad'>Our Shop</Link>
         </li>
         <li>
-          <Link><TiShoppingCart></TiShoppingCart></Link>
+          <Link><TiShoppingCart className='text-2xl'></TiShoppingCart></Link>
             </li>
             
       </div>
     );
     return (
       <div>
-        <div className="navbar text-white fixed max-w-screen-xl mx-auto z-50 bg-opacity-50 bg-black">
+        <div className="navbar pr-5 text-white fixed max-w-screen-xl mx-auto z-50 bg-opacity-50 bg-black">
           <div className="navbar-start">
             <div className="dropdown">
               <div
