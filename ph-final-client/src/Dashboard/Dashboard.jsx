@@ -10,8 +10,11 @@ import { FaUserEdit } from "react-icons/fa";
 import { GiNotebook } from "react-icons/gi";
 import { FaUsers } from "react-icons/fa";
 import useAdmin from "../Custom/useAdmin/useAdmin";
+import useCart from "../Custom/useCart/useCart";
+import { MdPayment } from "react-icons/md";
 const Dashboard = () => {
     const [isAdmin] = useAdmin()
+    const[cart] = useCart()
     return (
       <div className="flex ">
         <div className="w-64 flex flex-col  p-5 min-h-screen bg-blue-100">
@@ -67,7 +70,7 @@ const Dashboard = () => {
             ) : (
               <>
                 <li>
-                  <NavLink to="/dashboard/home">
+                  <NavLink to="/dashboard/userHome">
                     {" "}
                     <FaHome></FaHome> User Home
                   </NavLink>
@@ -81,7 +84,7 @@ const Dashboard = () => {
                 <li>
                   <NavLink to="/dashboard/cart">
                     {" "}
-                    <MdShoppingCart></MdShoppingCart> My Cart
+                    <MdShoppingCart></MdShoppingCart> My Cart ({cart.length})
                   </NavLink>
                 </li>
                 <li>
@@ -94,6 +97,12 @@ const Dashboard = () => {
                   <NavLink to="/dashboard/bookings">
                     {" "}
                     <FaListUl></FaListUl> My Bookings
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/dashboard/paymentHistory">
+                    {" "}
+                    <MdPayment></MdPayment>Payment History
                   </NavLink>
                 </li>
               </>

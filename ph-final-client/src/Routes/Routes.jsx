@@ -17,6 +17,10 @@ import PrivateRoute from "./PrivateRoute";
 import AdminRoute from "./AdminRoute";
 import ManageItem from "../Dashboard/ManageItem";
 import UpdateItem from "../Dashboard/UpdateItem";
+import Payment from "../Dashboard/Payment";
+import PaymentHistory from "../Dashboard/PaymentHistory";
+import UserHome from "../Dashboard/UserHome";
+import AdminHome from "../Dashboard/AdminHome";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -59,8 +63,28 @@ export const router = createBrowserRouter([
     errorElement: <Error></Error>,
     children: [
       {
+        path: "/dashboard/userHome",
+        element: <UserHome></UserHome>,
+      },
+      {
+        path: "/dashboard/adminHome",
+        element: (
+          <AdminRoute>
+            <AdminHome></AdminHome>
+          </AdminRoute>
+        ),
+      },
+      {
         path: "/dashboard/cart",
         element: <Mycart></Mycart>,
+      },
+      {
+        path: "/dashboard/payment",
+        element: <Payment></Payment>,
+      },
+      {
+        path: "/dashboard/paymentHistory",
+        element: <PaymentHistory></PaymentHistory>,
       },
       {
         path: "/dashboard/users",
@@ -93,7 +117,8 @@ export const router = createBrowserRouter([
             <UpdateItem></UpdateItem>
           </AdminRoute>
         ),
-        loader: ({ params }) => fetch(`http://localhost:3000/menu/${params.id}`),
+        loader: ({ params }) =>
+          fetch(`http://localhost:3000/menu/${params.id}`),
       },
     ],
   },
