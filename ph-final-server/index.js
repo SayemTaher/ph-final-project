@@ -1,11 +1,16 @@
 const express = require('express')
+
 const app = express()
 const port = process.env.PORT || 3000 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+const bodyParser = require("body-parser");
 const cors = require('cors') 
+app.use(bodyParser.json());
 
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173"] }));
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.vybo3pc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -24,7 +29,8 @@ async function run() {
     await client.connect();
     const menuCollection = client.db("bistroDB").collection("menu");
     const cartCollection = client.db("bistroDB").collection("carts");
-    const userCollection = client.db("bistroDB").collection("users");
+      const userCollection = client.db("bistroDB").collection("users");
+      const paymentCollection = client.db('bistroDB').collection('payments')
     //jwt related api's
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -208,6 +214,128 @@ async function run() {
       const result = await cartCollection.deleteOne(query);
       res.send(result);
     });
+      //-----------------
+
+      //payment
+
+      
+app.post("/create-payment-intent", async (req, res) => {
+  try {
+    // Log the request body for debugging
+    const { amount } = req.body;
+    const price = parseInt(amount * 100) // Expecting amount, currency, and optional metadata from client
+    console.log(req.body);
+    // Validate required parameters
+    if (!amount ) {
+      return res
+        .status(400)
+        .send({ error: "Amount is required" });
+    }
+
+    // Create a PaymentIntent with the specified amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount:price, // Amount in cents
+      currency : 'usd',
+     
+    });
+
+    // Respond with the client_secret
+    res.send({
+      client_secret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    console.error("Error creating PaymentIntent:", error);
+    res.status(500).send({ error: "Failed to create PaymentIntent" });
+  }
+});
+      //payment and order history api
+
+      app.post('/payments', async (req, res) => {
+          const data = req.body 
+          const result = await paymentCollection.insertOne(data)
+          const query = {
+              _id: {
+                  $in : data.cartId.map(id => new ObjectId(id))
+              }
+          }
+          const emptyCart = await cartCollection.deleteMany(query)
+          res.send({ result ,emptyCart})
+
+      })
+      //get payment history based on specific user email
+      app.get('/payment/:email', verifyToken, async (req, res) => {
+          const email = req.params.email 
+          const query = {
+              email: email
+          }
+          if (req.params.email !== req.decoded.email) {
+              return res.status(403).send({message : 'Forbidden access'})
+          }
+          const result = await paymentCollection.find(query).toArray()
+          res.send(result)
+      })
+      //statistics 
+      app.get('/admin-stats', verifyToken,verifyAdmin, async (req, res) => {
+          const users = await userCollection.estimatedDocumentCount()
+          const menuItems = await menuCollection.estimatedDocumentCount()
+          const orders = await paymentCollection.estimatedDocumentCount()
+          const revenue = await paymentCollection.aggregate([{
+              $group: {
+                  _id: null,
+                  totalRevenue: {
+                      $sum: '$price'
+                  }
+              }
+          }]).toArray();
+          const foundRevenue = revenue.length > 0 ? revenue[0].totalRevenue : 0
+          res.send({users,menuItems,orders,foundRevenue})
+      })
+    //use aggreggate pipeline to join collections 
+    app.get('/order-stats',verifyToken,verifyAdmin, async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$menuItemId", // seperate a property form the target data coolection
+          },
+          {
+            $lookup: {
+              // look for another data collection in the other hand joining for the collection that you want to merge / join
+
+              from: "menu",
+              localField: "menuItemId", // in this case local field is the immediate target field paymentcollection -> menuItemId
+              foreignField: "_id",
+              as: "menuItems", // alias is used to name the merged collection , so in this case payment and menu collection merged and created another dataset called 'menuItems'
+            },
+          },
+          {
+            $unwind: "$menuItems", // now unwind the newly created data collection as we named it using alias 'menuItems
+          },
+          {
+            $group: {
+              _id: "$menuItems.category", // now group the items based on _ids and we are looking for category so menuItems.category will work as _ids
+              quantity: {  // we are going to count how many items we sold based on specific categories 
+                $sum: 1,
+              },
+              revenue: {
+                $sum : '$menuItems.price' // getting the revenue for specific sole items category
+              }
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              category: '$_id',
+              quantity: '$quantity',
+              revenue : '$revenue'
+
+            }
+          }
+        ])
+        .toArray();
+      res.send(result)
+    })
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
